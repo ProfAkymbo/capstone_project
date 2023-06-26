@@ -1,0 +1,67 @@
+URLS
+1.) GitHub repo link
+2.) Evidence of successful deployment of the static website to S3
+5.) Evidence of Prometheus Server
+
+SCREENSHOTS
+
+11.) Evidence that Prometheus is monitoring memory, cpu and disk usage of EC2 instances.
+12.) Evidence that Prometheus and AlertManager send alerts when certain conditions exist in the EC2 instance.
+
+Install Prometheus
+sudo useradd --no-create-home prometheus
+sudo mkdir /etc/prometheus
+sudo mkdir /var/lib/prometheus
+wget https://github.com/prometheus/prometheus/releases/download/v2.19.0/prometheus-2.19.0.linux-amd64.tar.gz
+tar xvfz prometheus-2.19.0.linux-amd64.tar.gz
+
+sudo cp prometheus-2.19.0.linux-amd64/prometheus /usr/local/bin
+sudo cp prometheus-2.19.0.linux-amd64/promtool /usr/local/bin/
+sudo cp -r prometheus-2.19.0.linux-amd64/consoles /etc/prometheus
+sudo cp -r prometheus-2.19.0.linux-amd64/console_libraries /etc/prometheus
+
+sudo cp prometheus-2.19.0.linux-amd64/promtool /usr/local/bin/
+rm -rf prometheus-2.19.0.linux-amd64.tar.gz prometheus-2.19.0.linux-amd64
+
+
+
+
+
+
+
+
+
+
+
+
+rules:
+  - alert: InstanceIsDown
+       # Condition for alerting
+       expr: up == 0
+       for: 1m
+       # Annotation - additional informational labels to store more information
+       annotations:
+           summary: 'Instance {{ $labels.instance }} down'
+           description: '{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 1 minute.'
+       # Labels - additional labels to be attached to the alert
+       labels:
+           severity: 'critical'
+
+  - alert: NodeLoadAverage
+       expr: ((node_load5 / count without (cpu, mode) (node_cpu{mode="system"})) > 1)
+       for: 2m
+       labels:
+           severity: "page"
+
+       annotations:
+           summary: "{{$labels.instance}}: High LA detected",
+           description: "{{$labels.instance}}: LA is high"
+
+  - alert NodeLowDataDisk
+       expr: ((node_filesystem_size{mountpoint="/data-disk"} - node_filesystem_free{mountpoint="/data-disk"} ) / node_filesystem_size{mountpoint=>
+       for: 1m
+       labels:
+           severity: "page"
+       annotations:
+           summary: "{{$labels.instance}}: Low data disk space",
+           description: "{{$labels.instance}}: Data disk usage is above 10% (current value is: {{ $value }})"
