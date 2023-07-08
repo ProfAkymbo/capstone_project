@@ -1,0 +1,26 @@
+- name: Upgrade System
+  apt: upgrade=dist update_cache=yes autoremove=yes
+  become: true
+
+- name: "install packages"
+  become: true
+  ansible.builtin.apt:
+    name:
+      - nodejs
+      - npm
+    state: latest
+    update_cache: yes
+
+- name: "install pm2"
+  become: true
+  ansible.builtin.npm:
+    name: pm2
+    production: yes
+    global: yes
+
+- name: "Move .env variables to profile"
+  become: true
+  template:
+    src: myenv.sh
+    dest: /etc/profile.d
+    mode: 0666

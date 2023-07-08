@@ -1,0 +1,44 @@
+- name: Creates directory
+  file:
+    path: ~/backend
+    state: directory
+
+- name: "move backend files to server."
+  copy:
+    src: files/backend/
+    dest: ~/backend
+
+- name: "install package dependencies"
+  shell: |
+    cd ~/backend
+    ls
+    npm install
+
+- name: "Copy env vars"
+  shell: |
+      cd ~/backend
+      cat <<EOT >> .env
+      ENVIRONMENT= production
+      TYPEORM_CONNECTION= "{{ lookup('env', 'TYPEORM_CONNECTION') }}"
+      TYPEORM_MIGRATIONS_DIR= "./migrations"
+      TYPEORM_MIGRATIONS= "./migrations/*.js"
+      TYPEORM_ENTITIES= "./modules/domain/**/*.entity.js"
+      TYPEORM_HOST= "{{ lookup('env', 'TYPEORM_HOST') }}"
+      TYPEORM_PORT= "{{ lookup('env', 'TYPEORM_PORT') }}"
+      TYPEORM_USERNAME= "{{ lookup('env', 'TYPEORM_USERNAME') }}"
+      TYPEORM_PASSWORD= "{{ lookup('env', 'TYPEORM_PASSWORD') }}"
+      TYPEORM_DATABASE= "{{ lookup('env', 'TYPEORM_DATABASE') }}"
+      EOT
+
+- name: "build package"
+  shell: |
+    cd ~/backend
+    npm run migrations
+    npm run build
+
+- name: Executing node
+  become: true
+  shell: |
+    cd ~/backend/dist
+    pm2 start npm --name backend -- start
+    pm2 ls
