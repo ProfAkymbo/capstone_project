@@ -631,7 +631,12 @@ workflows:
           filters:
             branches:
               only: main
-      - tear-down-infra
+      - tear-down-infra:
+          requires:
+            - deploy-infrastructure
+          filters:
+            branches:
+              only: main
       # - configure-infrastructure:
       #     requires: [deploy-infrastructure]
       # - run-migrations:
