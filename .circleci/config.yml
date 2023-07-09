@@ -12,7 +12,10 @@ defaults:
         - image: amazon/aws-cli
   - &ansibleImage
     docker:
-        - image: cimg/python:3.11.2
+        - image: cimg/python:3.11.2       
+  - &terraformImage
+    docker:
+      - image: hashicorp/terraform:1.0.0
 
 commands:
   
@@ -243,7 +246,7 @@ jobs:
       # - notify_slack_error
   
   deploy-infrastructure:
-    <<: *awsImage
+    <<: *terraformImage
     steps:
       - checkout
       - run:
@@ -251,24 +254,30 @@ jobs:
           command: |
             yum update -y
             yum install -y gzip tar
+      - run: 
+          name: Ensure cloudfront infra exists
+          command: |
+            cd ~/project/.circleci/files/cloudfront
+            terraform init
+            terraform apply -auto-approve -var "WorkflowID=royalBoe"
       - run:
           name: Ensure back-end infrastructure exists
           command: |
-            aws cloudformation deploy \
-              --template-file .circleci/files/backend.yml \
-              --tags project=udapeople-royalboe \
-              --stack-name "udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
-              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"  
+            cd ~/project/.circleci/files/backend
+            terraform init
+            terraform apply -auto-approve -var "ID=${CIRCLE_WORKFLOW_ID:0:7}" 
               
       - run:
           name: Ensure front-end infrastructure exist
           command: |
-            aws cloudformation deploy \
-              --template-file .circleci/files/frontend.yml \
-              --tags project=udapeopl=royalboe \
-              --stack-name "udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:7}" \
-              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"  
+            cd ~/project/.circleci/files/frontend
+            terraform init
+            terraform apply -auto-approve -var "ID=${CIRCLE_WORKFLOW_ID:0:7}"
 
+  get-backend-instance-ip:
+    <<: *awsImage
+    steps:
+      - checkout
       - run:
           name: Add back-end ip to ansible inventory
           command: |
@@ -296,14 +305,37 @@ jobs:
       #     paths:
       #       - appkey.txt
 
-      - destroy-environment:
-          stack-name: "udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:7}"
+      # - destroy-environment:
+      #     stack-name: "udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:7}"
 
-      - destroy-environment:
-          stack-name: "udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}"
+      # - destroy-environment:
+      #     stack-name: "udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}"
 
       # - notify_slack_success
-      # - notify_slack_error     
+      # - notify_slack_error  
+
+  tear-down-infra:
+    <<: *terraformImage
+    steps:
+      - checkout
+      - run:
+          name: Tear down backend infrastructure
+          command: |
+            cd .circleci/files/backend
+            terraform init
+            terraform destroy -auto-approve
+      - run:
+          name: Tear down frontend infrastructure
+          command: |
+            cd .circleci/files/frontend
+            terraform init
+            terraform destroy -auto-approve
+      - run:
+          name: Tear down cloudfront-update infrastructure
+          command: |
+            cd .circleci/files/cloudfront
+            terraform init
+            terraform destroy -auto-approve  
 
   configure-infrastructure:
     <<: *ansibleImage
@@ -590,15 +622,15 @@ workflows:
       - scan-backend:
           requires:
             - build-backend
-      # - deploy-infrastructure:
-      #     requires:
-      #       - test-frontend
-      #       - test-backend
-      #       - scan-frontend
-      #       - scan-backend
-      #     filters:
-      #       branches:
-      #         only: main
+      - deploy-infrastructure:
+          requires:
+            - test-frontend
+            - test-backend
+            - scan-frontend
+            - scan-backend
+          filters:
+            branches:
+              only: main
       # - configure-infrastructure:
       #     requires: [deploy-infrastructure]
       # - run-migrations:
