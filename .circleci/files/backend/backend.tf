@@ -40,7 +40,7 @@ egress {
 }
 resource "aws_instance" "EC2Instance" {
   instance_type = "t2.micro"
-  security_group_names = [aws_security_group.InstanceSecurityGroup.name]
+  security_groups = [aws_security_group.InstanceSecurityGroup.name]
   key_name      = aws_key_pair.devkey.key_name
   ami           = "ami-068663a3c619dd892" # Replace with the appropriate AMI ID for your region and requirements
 
