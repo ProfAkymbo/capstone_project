@@ -39,7 +39,4 @@ resource "aws_cloudfront_distribution" "WebpageCDN" {
 output "WorkflowID" {
   value       = var.WorkflowID
   description = "URL for website hosted on S3"
-  export {
-    name = "WorkflowID"
-  }
 }
