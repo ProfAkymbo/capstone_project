@@ -249,11 +249,11 @@ jobs:
     <<: *terraformImage
     steps:
       - checkout
-      - run:
-          name: Install tar and gzip 
-          command: |
-            yum update -y
-            yum install -y gzip tar
+      # - run:
+      #     name: Install tar and gzip 
+      #     command: |
+      #       sudo apt update -y
+      #       sudo apt install tar gzip -y
       - run: 
           name: Ensure cloudfront infra exists
           command: |
