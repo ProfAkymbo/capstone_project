@@ -614,7 +614,7 @@ workflows:
               only: main
 
       - configure-infrastructure:
-          requires: [deploy-infrastructure]
+          requires: [deploy-infrastructure, get-backend-instance-ip]
       # - tear-down-infra:
       #     requires:
       #       - deploy-infrastructure
