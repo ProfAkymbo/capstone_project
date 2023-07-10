@@ -283,6 +283,11 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Install tar and gzip 
+          command: |
+            yum update -y
+            yum install -y gzip tar
+      - run:
           name: Add back-end ip to ansible inventory
           command: |
             aws ec2 describe-instances \
