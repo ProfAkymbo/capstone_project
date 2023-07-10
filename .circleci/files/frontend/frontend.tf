@@ -51,6 +51,10 @@ resource "aws_s3_bucket_acl" "website" {
 
 resource "aws_s3_bucket_policy" "WebsiteBucketPolicy" {
   bucket = aws_s3_bucket.WebsiteBucket.id
+  depends_on = [
+    aws_s3_bucket_ownership_controls.website,
+    aws_s3_bucket_public_access_block.website,
+  ]
 
   policy = <<EOF
   {
