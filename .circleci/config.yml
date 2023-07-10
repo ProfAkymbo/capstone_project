@@ -333,7 +333,7 @@ jobs:
       - checkout
       - install-aws
       - add_ssh_keys:
-          fingerprints: ["54:36:8b:c8:e5:af:9e:19:d7:50:27:9b:ef:20:d9:d5"]
+          fingerprints: ["91:70:ff:36:37:f2:23:4d:41:51:55:85:9d:e4:3c:f4:c9:92:38:1c"]
       - attach_workspace:
           at: ~/
       - run:
@@ -433,7 +433,7 @@ jobs:
     steps:
       - checkout
       - add_ssh_keys:
-          fingerprints: ["54:36:8b:c8:e5:af:9e:19:d7:50:27:9b:ef:20:d9:d5"]
+          fingerprints: ["91:70:ff:36:37:f2:23:4d:41:51:55:85:9d:e4:3c:f4:c9:92:38:1c"]
       - attach_workspace:
           at: ~/
       - install-ansible
