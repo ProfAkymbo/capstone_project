@@ -84,18 +84,27 @@ commands:
           event: pass
           template: basic_success_1
 
-  destroy-environment:
-    description: Destroy back-end and front-end cloudformation stacks given a workflow ID.
-    parameters:
-      stack-name:
-        default: "frontend-${CIRCLE_WORKFLOW_ID:0:7}"
-        type: string   
+  destroy-frontend-environment:
+    description: Destroy front-end  
     steps:
       - run:
-          name: Destroy environments
+          name: Tear down frontend infrastructure
           when: on_fail
           command: |
-            aws cloudformation delete-stack --stack-name << parameters.stack-name >>
+            cd .circleci/files/frontend
+            terraform init
+            terraform destroy -auto-approve -var "ID=${CIRCLE_WORKFLOW_ID:0:7}"
+    
+  destroy-backend-environment:
+    description: Destroy back-end.  
+    steps:
+      - run:
+          name: Tear down backend infrastructure
+          when: on_fail
+          command: |
+            cd .circleci/files/backend
+            terraform init
+            terraform destroy -auto-approve
 
   revert-migrations:
     description: Revert the last migration if successfully run in the current workflow.
@@ -260,7 +269,7 @@ jobs:
           command: |
             cd ~/project/.circleci/files/backend
             terraform init
-            terraform apply -auto-approve -var "ID=${CIRCLE_WORKFLOW_ID:0:7}" 
+            terraform apply -auto-approve
               
       - run:
           name: Ensure front-end infrastructure exist
@@ -277,7 +286,7 @@ jobs:
           name: Add back-end ip to ansible inventory
           command: |
             aws ec2 describe-instances \
-              --filter Name="tag:Name",Values="backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+              --filter Name="tag:Name",Values="backend-server" \
               --query 'Reservations[*].Instances[*].PublicIpAddress' \
               --output text >> .circleci/ansible/inventory.txt
       
@@ -318,7 +327,7 @@ jobs:
           command: |
             cd .circleci/files/backend
             terraform init
-            terraform destroy -auto-approve -var "ID=${CIRCLE_WORKFLOW_ID:0:7}"
+            terraform destroy -auto-approve
       - run:
           name: Tear down frontend infrastructure
           command: |
@@ -356,10 +365,8 @@ jobs:
           name: Configure server
           command: |
             ansible-playbook -i .circleci/ansible/inventory.txt .circleci/ansible/configure-server.yml
-      - destroy-environment:
-          stack-name: "udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:7}"
-      - destroy-environment:
-          stack-name: "udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}"
+      - destroy-backend-environment
+      - destroy-frontend-environment
       
   
   run-migrations:
@@ -389,10 +396,9 @@ jobs:
               curl --insecure https://kvdb.io/5j2Vyk9xyHqE3ZZVQMGA7M/migration_${CIRCLE_WORKFLOW_ID:0:7} -d '1'
             fi
       - revert-migrations
-      - destroy-environment:
-          stack-name: "frontend-${CIRCLE_WORKFLOW_ID:0:7}"
-      - destroy-environment:
-          stack-name: "backend-${CIRCLE_WORKFLOW_ID:0:7}"   
+      - destroy-frontend-environment
+      - destroy-backend-environment
+  
       # - notify_slack_success
       # - notify_slack_error   
     
@@ -433,10 +439,8 @@ jobs:
       - revert-migrations
       - clear-bucket:
           bucket-name: "udapeople-${CIRCLE_WORKFLOW_ID:0:7}"
-      - destroy-environment:
-          stack-name: "frontend-${CIRCLE_WORKFLOW_ID:0:7}"
-      - destroy-environment:
-          stack-name: "backend-${CIRCLE_WORKFLOW_ID:0:7}"  
+      - destroy-frontend-environment
+      - destroy-backend-environment  
   
   deploy-backend:
     <<: *nodeImage
@@ -483,10 +487,8 @@ jobs:
       - revert-migrations
       - clear-bucket:
           bucket-name: "udapeople-${CIRCLE_WORKFLOW_ID:0:7}"
-      - destroy-environment:
-          stack-name: "frontend-${CIRCLE_WORKFLOW_ID:0:7}"
-      - destroy-environment:
-          stack-name: "backend-${CIRCLE_WORKFLOW_ID:0:7}"
+      - destroy-frontend-environment
+      - destroy-backend-environment
 
   smoke-test:
     docker:
@@ -525,10 +527,9 @@ jobs:
             fi
       - revert-migrations
       - clear-bucket
-      - destroy-environment:
-          stack-name: "frontend-${CIRCLE_WORKFLOW_ID:0:7}"
-      - destroy-environment:
-          stack-name: "backend-${CIRCLE_WORKFLOW_ID:0:7}"    
+      - destroy-frontend-environment
+      - destroy-backend-environment
+   
 
   cloudfront-update:
     <<: *nodeImage
@@ -561,11 +562,9 @@ jobs:
             # --paths "/*"
 
       - clear-bucket
-      - destroy-environment:
-          stack-name: "frontend-${CIRCLE_WORKFLOW_ID:0:7}"
-      - destroy-environment:
-          stack-name: "backend-${CIRCLE_WORKFLOW_ID:0:7}"
-      - revert-migrations        
+      - revert-migrations
+      - destroy-frontend-environment
+      - destroy-backend-environment        
 
   cleanup:
       docker:
@@ -626,14 +625,27 @@ workflows:
           filters:
             branches:
               only: main
+      - get-backend-instance-ip:
+          requires:
+            - deploy-infrastructure
+          filters:
+            branches:
+              only: main
+
+      # - tear-down-infra:
+      #     requires:
+      #       - deploy-infrastructure
+      #     filters:
+      #       branches:
+      #         only: main
+      - configure-infrastructure:
+          requires: [deploy-infrastructure]
       - tear-down-infra:
           requires:
             - deploy-infrastructure
           filters:
             branches:
               only: main
-      # - configure-infrastructure:
-      #     requires: [deploy-infrastructure]
       # - run-migrations:
       #     requires: [configure-infrastructure]
       # - deploy-frontend:
