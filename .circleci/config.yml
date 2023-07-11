@@ -350,6 +350,7 @@ jobs:
       - checkout
       - install-aws
       - install-terraform
+      - install-ansible
       - add_ssh_keys:
           fingerprints: ["42:55:77:e0:35:6a:c4:67:1f:dc:67:d2:3d:f5:a5:2f"]
       - attach_workspace:
