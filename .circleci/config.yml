@@ -357,8 +357,6 @@ jobs:
       - run:
           name: check inventory content
           command: cat ~/project/.circleci/ansible/inventory.txt
-      
-      - install-ansible
 
       - run:
           name: Install dependencies (openssh)
