@@ -30,6 +30,20 @@ commands:
             unzip awscliv2.zip
             sudo ./aws/install
   
+  install-terraform:
+    description: Install Terraform
+    steps:
+      - run:
+          name: Install Terraform
+          command: |
+            sudo apt-get install wget curl unzip software-properties-common gnupg2 -y
+            curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add -
+            sudo apt-add-repository "deb [arch=$(dpkg --print-architecture)] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+            apt-get update -y
+            sudo apt update
+            sudo apt install software-properties-common -y
+            sudo apt install terraform -y
+  
   install-ansible:
     description: Install Ansible
     steps:
@@ -332,6 +346,7 @@ jobs:
     steps:
       - checkout
       - install-aws
+      - install-terraform
       - add_ssh_keys:
           fingerprints: ["91:70:ff:36:37:f2:23:4d:41:51:55:85:9d:e4:3c:f4:c9:92:38:1c"]
       - attach_workspace:
@@ -361,6 +376,7 @@ jobs:
     steps:
       - checkout
       - install-aws
+      - install-terraform
       - attach_workspace:
           at: ~/
       - restore_cache:
@@ -399,6 +415,7 @@ jobs:
           keys: [frontend-build]
       - install-aws
       - install-ansible
+      - install-terraform
       
       - run:
           name: Install dependencies
@@ -438,6 +455,7 @@ jobs:
           at: ~/
       - install-ansible
       - install-aws
+      - install-terraform
       - run:
           name: Install dependencies (openssh)
           command: |
@@ -483,6 +501,7 @@ jobs:
       - checkout
       - install-aws
       - install-nodejs
+      - install-terraform
       - attach_workspace:
           at: ~/
       - run:
@@ -522,6 +541,7 @@ jobs:
     steps:
       - checkout
       - install-aws
+      - install-terraform
       - attach_workspace:
           at: ~/
       - run:
@@ -620,23 +640,23 @@ workflows:
             branches:
               only: main
 
-      # - configure-infrastructure:
-      #     requires: [deploy-infrastructure, get-backend-instance-ip]
-      # # - tear-down-infra:
-      # #     requires:
-      # #       - deploy-infrastructure
-      # #     filters:
-      # #       branches:
-      # #         only: main
-      # - run-migrations:
-      #     requires: [configure-infrastructure]
-      # - deploy-frontend:
-      #     requires: [run-migrations]
-      # - deploy-backend:
-      #     requires: [run-migrations]
-      # - smoke-test:
-      #     requires: [deploy-backend, deploy-frontend]
-      # - cloudfront-update:
-      #     requires: [smoke-test]
-      # # - cleanup:
-      # #     requires: [cloudfront-update]
+      - configure-infrastructure:
+          requires: [deploy-infrastructure, get-backend-instance-ip]
+      # - tear-down-infra:
+      #     requires:
+      #       - deploy-infrastructure
+      #     filters:
+      #       branches:
+      #         only: main
+      - run-migrations:
+          requires: [configure-infrastructure]
+      - deploy-frontend:
+          requires: [run-migrations]
+      - deploy-backend:
+          requires: [run-migrations]
+      - smoke-test:
+          requires: [deploy-backend, deploy-frontend]
+      - cloudfront-update:
+          requires: [smoke-test]
+      # - cleanup:
+      #     requires: [cloudfront-update]
