@@ -634,13 +634,6 @@ workflows:
             branches:
               only: main
 
-      - tear-down-infra:
-          requires:
-            - deploy-infrastructure
-          filters:
-            branches:
-              only: main
-
       - configure-infrastructure:
           requires: [deploy-infrastructure, get-backend-instance-ip]
       # - tear-down-infra:
