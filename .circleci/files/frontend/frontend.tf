@@ -7,11 +7,6 @@ variable "ID" {
 # Resources
 resource "aws_s3_bucket" "WebsiteBucket" {
   bucket = "udapeople-${var.ID}"
-
-  website {
-    index_document = "index.html"
-    error_document = "404.html"
-  }
 }
 
 resource "aws_s3_bucket_website_configuration" "website" {
