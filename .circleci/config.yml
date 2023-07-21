@@ -275,12 +275,6 @@ jobs:
     <<: *terraformImage
     steps:
       - checkout
-      # - run: 
-      #     name: Ensure cloudfront infra exists
-      #     command: |
-      #       cd ~/project/.circleci/files/cloudfront
-      #       terraform init
-      #       terraform apply -auto-approve -var "WorkflowID=royalBoe"
       - run:
           name: Ensure back-end infrastructure exists
           command: |
@@ -337,12 +331,6 @@ jobs:
             cd .circleci/files/frontend
             terraform init
             terraform destroy -auto-approve -var "ID=${CIRCLE_WORKFLOW_ID:0:7}"
-      # - run:
-      #     name: Tear down cloudfront-update infrastructure
-      #     command: |
-      #       cd .circleci/files/cloudfront
-      #       terraform init
-      #       terraform destroy -auto-approve -var "ID=${CIRCLE_WORKFLOW_ID:0:7}"
 
   configure-infrastructure:
     <<: *ansibleImage
@@ -428,7 +416,6 @@ jobs:
       - run:
           name: Get backend url
           command: |
-            # your code here
             export BACKEND_IP=$(tail -n 1 ~/project/.circleci/ansible/inventory.txt)
             export API_URL="http://${BACKEND_IP}:3030"
             echo "API_URL=${API_URL}" >> frontend/.env
@@ -475,20 +462,8 @@ jobs:
       - run:
           name: Deploy backend
           command: |
-            # cd backend
-            # npm install
-            # npm run build
-            # cd ..
-
-            # cd .circleci/ansible
-            # mkdir files
-            # cd files
-            # tar -C ../../../backend -czvf artifact.tar.gz .
-            # cd ../
-
             echo "Content of the inventory file is :"
             cat ~/project/.circleci/ansible/inventory.txt
-            # ansible-playbook -i inventory.txt deploy-backend.yml --ssh-common-args='-o StrictHostKeyChecking=no'
             ansible-playbook -i ~/project/.circleci/ansible/inventory.txt .circleci/ansible/deploy-backend.yml --ssh-common-args='-o StrictHostKeyChecking=no'
       - revert-migrations
       - clear-bucket:
@@ -548,15 +523,7 @@ jobs:
           at: ~/
       - run:
           name: Update cloudfront distribution
-          command: |
-            # export OldWorkflowID=$(aws cloudformation \
-            # list-exports --query "Exports[?Name==\`WorkflowID\`].Value" \
-            # --no-paginate --output text)
-            # # echo "OLDWORKFLOWID=${OldWorkflowID}"
-            # echo $OldWorkflowID > OldWorkflowID.txt
-            # cat OldWorkflowID.txt
-            # # curl -k https://kvdb.io/$(echo $KEY_VALUE_DB)/udapeople_old_workflow_id -d "${OldWorkflowID}"
-            
+          command: |  
             aws cloudformation deploy \
             --template-file .circleci/files/cloudfront.yml \
             --stack-name InitialStack \
@@ -569,41 +536,8 @@ jobs:
       - destroy-frontend-environment
       - destroy-backend-environment        
 
-  cleanup:
-      docker:
-        - image: cimg/base:stable
-      steps:
-        - checkout
-        - install-aws
-        - install-nodejs
-        - attach_workspace:
-            at: ~/
-        - run:
-            name: Delete previous stacks and files
-            command: |
-              OldWorkflowID=$(curl --insecure https://kvdb.io/$(echo $KEY_VALUE_DB)/udapeople_old_workflow_id)
-              CurrentWorkflowID=${CIRCLE_WORKFLOW_ID:0:7}
-              
-              echo "Old Workflow ID: $OldWorkflowID"  
-              echo "Current Workflow ID: $CurrentWorkflowID"  
-
-              # Fetch the stack names          
-              # export STACKS=($(aws cloudformation list-stacks --query "StackSummaries[*].StackName" \
-              #         --stack-status-filter CREATE_COMPLETE --no-paginate --output text)) 
-              # echo Stack names: "${STACKS[@]}" 
-
-              if [[ "$CurrentWorkflowID" != "$OldWorkflowID"  ]]
-              then
-                echo "--------------Delete Confirmed-----------------"
-                aws s3 rm "s3://udapeople-${OldWorkflowID}" --recursive
-                aws cloudformation delete-stack --stack-name "udapeople-backend-${OldWorkflowID}"
-                aws cloudformation delete-stack --stack-name "udapeople-frontend-${OldWorkflowID}"
-              else
-                echo "--------------Delete Not Confirmed-----------------"
-              fi
-
 workflows:
-  default:
+  build:
     jobs:
       - build-frontend
       - build-backend
@@ -619,39 +553,55 @@ workflows:
       - scan-backend:
           requires:
             - build-backend
-      - deploy-infrastructure:
-          requires:
-            - test-frontend
-            - test-backend
-            - scan-frontend
-            - scan-backend
-          filters:
-            branches:
-              only: main
-      - get-backend-instance-ip:
-          requires:
-            - deploy-infrastructure
-          filters:
-            branches:
-              only: main
+  # default:
+  #   jobs:
+  #     - build-frontend
+  #     - build-backend
+  #     - test-frontend: 
+  #         requires: 
+  #           - build-frontend
+  #     - test-backend:
+  #         requires:
+  #           - build-backend
+  #     - scan-frontend:
+  #         requires:
+  #           - build-frontend
+  #     - scan-backend:
+  #         requires:
+  #           - build-backend
+  #     - deploy-infrastructure:
+  #         requires:
+  #           - test-frontend
+  #           - test-backend
+  #           - scan-frontend
+  #           - scan-backend
+  #         filters:
+  #           branches:
+  #             only: main
+  #     - get-backend-instance-ip:
+  #         requires:
+  #           - deploy-infrastructure
+  #         filters:
+  #           branches:
+  #             only: main
 
-      - configure-infrastructure:
-          requires: [deploy-infrastructure, get-backend-instance-ip]
-      # - tear-down-infra:
-      #     requires:
-      #       - deploy-infrastructure
-      #     filters:
-      #       branches:
-      #         only: main
-      - run-migrations:
-          requires: [configure-infrastructure]
-      - deploy-frontend:
-          requires: [run-migrations]
-      - deploy-backend:
-          requires: [run-migrations]
-      - smoke-test:
-          requires: [deploy-backend, deploy-frontend]
-      - cloudfront-update:
-          requires: [smoke-test]
-      # - cleanup:
-      #     requires: [cloudfront-update]
+  #     - configure-infrastructure:
+  #         requires: [deploy-infrastructure, get-backend-instance-ip]
+  #     # - tear-down-infra:
+  #     #     requires:
+  #     #       - deploy-infrastructure
+  #     #     filters:
+  #     #       branches:
+  #     #         only: main
+  #     - run-migrations:
+  #         requires: [configure-infrastructure]
+  #     - deploy-frontend:
+  #         requires: [run-migrations]
+  #     - deploy-backend:
+  #         requires: [run-migrations]
+  #     - smoke-test:
+  #         requires: [deploy-backend, deploy-frontend]
+  #     - cloudfront-update:
+  #         requires: [smoke-test]
+  #     # - cleanup:
+  #     #     requires: [cloudfront-update]

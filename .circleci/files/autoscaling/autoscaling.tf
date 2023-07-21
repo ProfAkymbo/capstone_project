@@ -107,5 +107,4 @@ resource "aws_autoscaling_group" "project_asg" {
 
   lifecycle {
     create_before_destroy = true
-  }
 }
